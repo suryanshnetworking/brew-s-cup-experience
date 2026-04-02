@@ -1,16 +1,44 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import Header from "@/components/Header";
+import HeroSection from "@/components/HeroSection";
+import AboutSection from "@/components/AboutSection";
+import GallerySection from "@/components/GallerySection";
+import MenuSection from "@/components/MenuSection";
+import BookingSection from "@/components/BookingSection";
+import ContactSection from "@/components/ContactSection";
+import CartDrawer from "@/components/CartDrawer";
+import IntroAnimation from "@/components/IntroAnimation";
+import ScrollAnimator from "@/components/ScrollAnimator";
+import Footer from "@/components/Footer";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <>
+      <IntroAnimation />
+      <Header />
+      <CartDrawer />
+      <main>
+        <ScrollAnimator index={0}>
+          <HeroSection />
+        </ScrollAnimator>
+        <ScrollAnimator index={1}>
+          <AboutSection />
+        </ScrollAnimator>
+        <ScrollAnimator index={2}>
+          <GallerySection />
+        </ScrollAnimator>
+        <ScrollAnimator index={3}>
+          <MenuSection />
+        </ScrollAnimator>
+        <ScrollAnimator index={4}>
+          <BookingSection />
+        </ScrollAnimator>
+        <ScrollAnimator index={5}>
+          <ContactSection />
+        </ScrollAnimator>
+      </main>
+      <Footer />
+    </>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
