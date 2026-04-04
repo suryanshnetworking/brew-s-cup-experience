@@ -14,7 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          created_at: string | null
+          customer_address: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          customer_pincode: string
+          id: string
+          items: Json
+          order_number: string
+          return_note: string | null
+          return_reason: string | null
+          return_status: string | null
+          status: string
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_address: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          customer_pincode: string
+          id?: string
+          items: Json
+          order_number: string
+          return_note?: string | null
+          return_reason?: string | null
+          return_status?: string | null
+          status?: string
+          total: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_address?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          customer_pincode?: string
+          id?: string
+          items?: Json
+          order_number?: string
+          return_note?: string | null
+          return_reason?: string | null
+          return_status?: string | null
+          status?: string
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      otps: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          otp: string
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          otp: string
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          otp?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
