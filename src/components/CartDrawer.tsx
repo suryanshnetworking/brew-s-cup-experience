@@ -1,18 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
+import { X, Plus, Minus, Trash2, ShoppingBag, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const FORMSPREE_URL = "https://formspree.io/f/mvzwgbdjamd";
 
 export default function CartDrawer() {
-  const { items, updateQuantity, removeItem, clearCart, total, isOpen, setIsOpen } = useCart();
-  const [step, setStep] = useState<"cart" | "checkout">("cart");
+  const { items, updateQuantity, removeItem, clearCart, total, isOpen, setIsOpen, isBuyNow, setIsBuyNow } = useCart();
+  const [step, setStep] = useState<"cart" | "checkout" | "otp" | "confirmed">("cart");
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", pincode: "" });
   const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpAttempts, setOtpAttempts] = useState(0);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [confirmedTotal, setConfirmedTotal] = useState(0);
+
+  useEffect(() => {
+    if (isBuyNow && isOpen) {
+      setStep("checkout");
+    }
+  }, [isBuyNow, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (step !== "confirmed") {
+        setStep("cart");
+      }
+      setOtp("");
+      setOtpAttempts(0);
+      setIsBuyNow(false);
+    }
+  }, [isOpen]);
 
   const validateJhansiPincode = (pin: string) => {
     const num = parseInt(pin);
@@ -25,75 +47,153 @@ export default function CartDrawer() {
     return hour >= 10 && hour < 21;
   };
 
-  const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateForm = () => {
     const { name, email, phone, address, pincode } = form;
-
     if (!name || !email || !phone || !address || !pincode) {
       toast.error("Please fill all required fields.");
-      return;
+      return false;
     }
     if (!validateJhansiPincode(pincode)) {
-      toast.error("Sorry, we only deliver within Jhansi. Please enter a valid Jhansi pincode (284001-284010).");
-      return;
+      toast.error("Sorry, we only deliver within Jhansi (284001-284010).");
+      return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { toast.error("Please enter a valid email."); return; }
-    if (phone.length < 10) { toast.error("Please enter a valid phone number."); return; }
+    if (!emailRegex.test(email)) { toast.error("Please enter a valid email."); return false; }
+    if (phone.length < 10) { toast.error("Please enter a valid phone number."); return false; }
     if (!isWithinWorkingHours()) {
-      toast.error("Sorry, orders can only be placed between 10:00 AM and 9:00 PM. Please try again during working hours.");
+      toast.error("Orders can only be placed between 10 AM and 9 PM.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSendOtp = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("handle-otp", {
+        body: { action: "send", email: form.email },
+      });
+      if (error) throw error;
+
+      // DEV: Show OTP in toast for testing (remove in production)
+      if (data?.otp) {
+        toast.info(`Dev OTP: ${data.otp}`, { duration: 60000 });
+      }
+
+      setOtpAttempts(0);
+      setOtp("");
+      setStep("otp");
+      toast.success("OTP sent to your email!");
+    } catch {
+      toast.error("Failed to send OTP. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      toast.error("Please enter the 6-digit OTP.");
       return;
     }
 
     setLoading(true);
-    const orderNo = `ORD-${Date.now().toString(36).toUpperCase()}`;
-    const itemsSummary = items.map(i => `${i.name} x${i.quantity} = ₹${i.price * i.quantity}`).join(", ");
-
     try {
-      const res = await fetch(FORMSPREE_URL, {
+      const { data, error } = await supabase.functions.invoke("handle-otp", {
+        body: { action: "verify", email: form.email, otp },
+      });
+
+      if (error || !data?.verified) {
+        const newAttempts = otpAttempts + 1;
+        setOtpAttempts(newAttempts);
+        if (newAttempts >= 3) {
+          toast.error("Too many failed attempts. Please start over.");
+          setStep("checkout");
+          setOtp("");
+          setOtpAttempts(0);
+        } else {
+          toast.error(`Incorrect OTP. ${3 - newAttempts} attempt(s) left.`);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // OTP verified — create order
+      const orderNo = `CAFE-${Date.now().toString(36).toUpperCase()}`;
+      setOrderNumber(orderNo);
+      setConfirmedTotal(total);
+      const itemsSummary = items.map(i => `${i.name} x${i.quantity} = ₹${i.price * i.quantity}`).join(", ");
+
+      // Insert order into database
+      await supabase.from("orders" as any).insert({
+        order_number: orderNo,
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        customer_address: `${form.address}, Jhansi - ${form.pincode}`,
+        customer_pincode: form.pincode,
+        items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+        total,
+        status: "Confirmed",
+      });
+
+      // Submit to Formspree
+      await fetch(FORMSPREE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           _subject: `New Order - ${orderNo}`,
           "Order Number": orderNo,
-          Name: name, Email: email, Phone: phone,
-          Address: `${address}, Jhansi - ${pincode}`,
+          Name: form.name,
+          Email: form.email,
+          Phone: form.phone,
+          Address: `${form.address}, Jhansi - ${form.pincode}`,
           Items: itemsSummary,
           "Total Amount": `₹${total}`,
           Type: "Order",
         }),
       });
-      if (res.ok) {
-        toast.success(`Order placed! Your order number is ${orderNo}. Confirmation sent to ${email}.`, { duration: 8000 });
-        clearCart();
-        setStep("cart");
-        setIsOpen(false);
-        setForm({ name: "", email: "", phone: "", address: "", pincode: "" });
-      } else toast.error("Something went wrong.");
-    } catch { toast.error("Network error."); }
+
+      clearCart();
+      setStep("confirmed");
+      toast.success(`Order ${orderNo} placed successfully!`);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    }
     setLoading(false);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setStep("cart");
+    setOtp("");
+    setOtpAttempts(0);
+    setOrderNumber("");
+    setConfirmedTotal(0);
+    setForm({ name: "", email: "", phone: "", address: "", pincode: "" });
   };
 
   if (!isOpen) return null;
 
   return (
     <>
-      <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={() => setIsOpen(false)} />
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-background shadow-2xl z-50 flex flex-col animate-slide-right" style={{ animationDirection: "normal" }}>
+      <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={handleClose} />
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-background shadow-2xl z-50 flex flex-col animate-slide-right">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-display text-xl font-bold text-foreground flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-accent" />
-            {step === "cart" ? "Your Cart" : "Checkout"}
+            {step === "cart" ? "Your Cart" : step === "checkout" ? "Checkout" : step === "otp" ? "Verify OTP" : "Order Confirmed"}
           </h2>
-          <button onClick={() => { setIsOpen(false); setStep("cart"); }} className="p-2 hover:bg-muted rounded-lg transition-colors">
+          <button onClick={handleClose} className="p-2 hover:bg-muted rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
-          {step === "cart" ? (
+          {step === "cart" && (
             items.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground">
                 <ShoppingBag className="w-16 h-16 mx-auto mb-4 opacity-30" />
@@ -128,54 +228,144 @@ export default function CartDrawer() {
                 ))}
               </div>
             )
-          ) : (
-            <form id="checkout-form" onSubmit={handleCheckout} className="space-y-4">
-              <p className="text-sm text-muted-foreground mb-4">All fields are required. Delivery within Jhansi only (10AM–9PM).</p>
+          )}
+
+          {step === "checkout" && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">All fields required. Delivery within Jhansi only (10AM–9PM).</p>
+              <div className="bg-card rounded-xl p-3 border border-border space-y-2">
+                {items.map(item => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.name} x{item.quantity}</span>
+                    <span className="font-medium">₹{item.price * item.quantity}</span>
+                  </div>
+                ))}
+                <div className="border-t border-border pt-2 flex justify-between font-bold">
+                  <span>Total</span>
+                  <span className="text-accent">₹{total}</span>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>Full Name *</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" required maxLength={100} />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" maxLength={100} />
               </div>
               <div className="space-y-2">
                 <Label>Email *</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="your@email.com" required maxLength={255} />
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="your@email.com" maxLength={255} />
               </div>
               <div className="space-y-2">
                 <Label>Phone Number *</Label>
-                <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="10-digit phone" required maxLength={15} />
+                <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="10-digit phone" maxLength={15} />
               </div>
               <div className="space-y-2">
                 <Label>Address (Jhansi only) *</Label>
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Your address in Jhansi" required maxLength={300} />
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Your address in Jhansi" maxLength={300} />
               </div>
               <div className="space-y-2">
                 <Label>Pincode *</Label>
-                <Input value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} placeholder="e.g. 284001" required maxLength={6} />
+                <Input value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} placeholder="e.g. 284001" maxLength={6} />
               </div>
-            </form>
+            </div>
+          )}
+
+          {step === "otp" && (
+            <div className="space-y-6 text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
+                <ShoppingBag className="w-8 h-8 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-semibold">Enter OTP</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  We've sent a 6-digit code to <strong>{form.email}</strong>
+                </p>
+              </div>
+              <Input
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="Enter 6-digit OTP"
+                className="text-center text-2xl tracking-[0.5em] font-mono"
+                maxLength={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                {otpAttempts > 0 && `${3 - otpAttempts} attempt(s) remaining • `}
+                OTP expires in 5 minutes
+              </p>
+              <Button onClick={handleSendOtp} variant="ghost" size="sm" className="text-accent">
+                Resend OTP
+              </Button>
+            </div>
+          )}
+
+          {step === "confirmed" && (
+            <div className="text-center py-12 space-y-6">
+              <CheckCircle className="w-20 h-20 text-green-500 mx-auto" />
+              <div>
+                <h3 className="font-display text-2xl font-bold text-foreground">Order Confirmed!</h3>
+                <p className="text-muted-foreground mt-2">Your order has been placed successfully.</p>
+              </div>
+              <div className="bg-card rounded-xl p-6 border border-border">
+                <p className="text-sm text-muted-foreground">Order Number</p>
+                <p className="text-2xl font-bold text-accent font-mono mt-1">{orderNumber}</p>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Total: <span className="font-bold text-foreground">₹{confirmedTotal}</span>
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Track your order at{" "}
+                <a href="/orders" className="text-accent underline font-medium">
+                  /orders
+                </a>
+              </p>
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        {items.length > 0 && (
+        {step === "cart" && items.length > 0 && (
           <div className="p-5 border-t border-border space-y-3">
             <div className="flex justify-between text-lg font-bold">
               <span>Total</span>
               <span className="text-accent">₹{total}</span>
             </div>
-            {step === "cart" ? (
-              <Button onClick={() => setStep("checkout")} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 py-5 text-base font-semibold rounded-xl">
-                Proceed to Checkout
+            <Button onClick={() => setStep("checkout")} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 py-5 text-base font-semibold rounded-xl">
+              Proceed to Checkout
+            </Button>
+          </div>
+        )}
+
+        {step === "checkout" && (
+          <div className="p-5 border-t border-border space-y-3">
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { if (isBuyNow) handleClose(); else setStep("cart"); }} className="flex-1 py-5 rounded-xl">
+                Back
               </Button>
-            ) : (
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep("cart")} className="flex-1 py-5 rounded-xl">
-                  Back
-                </Button>
-                <Button type="submit" form="checkout-form" disabled={loading} className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 py-5 font-semibold rounded-xl">
-                  {loading ? "Placing..." : "Place Order"}
-                </Button>
-              </div>
-            )}
+              <Button onClick={handleSendOtp} disabled={loading} className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 py-5 font-semibold rounded-xl gap-2">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Sending..." : "Send OTP"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "otp" && (
+          <div className="p-5 border-t border-border space-y-3">
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setStep("checkout"); setOtp(""); }} className="flex-1 py-5 rounded-xl">
+                Back
+              </Button>
+              <Button onClick={handleVerifyOtp} disabled={loading || otp.length !== 6} className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 py-5 font-semibold rounded-xl gap-2">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Verifying..." : "Verify & Place Order"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "confirmed" && (
+          <div className="p-5 border-t border-border">
+            <Button onClick={handleClose} className="w-full bg-primary text-primary-foreground py-5 rounded-xl">
+              Close
+            </Button>
           </div>
         )}
       </div>

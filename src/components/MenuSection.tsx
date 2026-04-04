@@ -3,7 +3,7 @@ import { menuItems } from "@/data/menuItems";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShoppingCart, Eye, Search, Coffee, UtensilsCrossed } from "lucide-react";
+import { ShoppingCart, Zap, Search, Coffee, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 
 type Category = "all" | "beverage" | "snack";
@@ -15,13 +15,17 @@ const tabs: { value: Category; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function MenuSection() {
-  const { addItem, setIsOpen } = useCart();
+  const { addItem, setIsOpen, buyNow } = useCart();
   const [activeTab, setActiveTab] = useState<Category>("all");
   const [search, setSearch] = useState("");
 
   const handleAddToCart = (item: typeof menuItems[0]) => {
     addItem({ id: item.id, name: item.name, price: item.price, image: item.image });
     toast.success(`${item.name} added to cart!`);
+  };
+
+  const handleBuyNow = (item: typeof menuItems[0]) => {
+    buyNow({ id: item.id, name: item.name, price: item.price, image: item.image });
   };
 
   const filtered = useMemo(() => {
@@ -47,7 +51,6 @@ export default function MenuSection() {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-10 max-w-2xl mx-auto">
-          {/* Category tabs */}
           <div className="flex rounded-xl bg-card border border-border p-1 shadow-sm">
             {tabs.map((tab) => (
               <button
@@ -64,8 +67,6 @@ export default function MenuSection() {
               </button>
             ))}
           </div>
-
-          {/* Search */}
           <div className="relative flex-1 w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -104,7 +105,7 @@ export default function MenuSection() {
                     </div>
                     <div className="mt-4 space-y-3">
                       <p className="font-display text-2xl font-bold text-accent">₹{item.price}</p>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Button
                           onClick={() => handleAddToCart(item)}
                           className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 gap-2"
@@ -113,12 +114,11 @@ export default function MenuSection() {
                           <ShoppingCart className="w-4 h-4" /> Add to Cart
                         </Button>
                         <Button
-                          onClick={() => { handleAddToCart(item); setIsOpen(true); }}
-                          variant="outline"
+                          onClick={() => handleBuyNow(item)}
                           size="sm"
-                          className="border-accent text-accent hover:bg-accent hover:text-accent-foreground gap-2"
+                          className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 gap-2"
                         >
-                          <Eye className="w-4 h-4" /> View Cart
+                          <Zap className="w-4 h-4" /> Buy Now
                         </Button>
                       </div>
                     </div>
