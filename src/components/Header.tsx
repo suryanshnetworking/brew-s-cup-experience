@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
-import { Menu, X, ShoppingCart, Coffee } from "lucide-react";
+import { Menu, X, ShoppingCart, Coffee, Package } from "lucide-react";
 
 const navLinks = [
   { label: "Home", href: "#home" },
@@ -53,6 +53,13 @@ export default function Header() {
               {link.label}
             </button>
           ))}
+          <a
+            href="/orders"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-foreground/80 hover:text-primary hover:bg-secondary transition-all flex items-center gap-1.5"
+          >
+            <Package className="w-4 h-4" />
+            Track Order
+          </a>
           <button
             onClick={() => setIsOpen(true)}
             className="relative ml-2 p-2 rounded-lg bg-accent text-accent-foreground hover:bg-accent/90 transition-all"
@@ -95,6 +102,13 @@ export default function Header() {
                 {link.label}
               </button>
             ))}
+            <a
+              href="/orders"
+              className="px-4 py-3 rounded-lg text-left font-medium text-foreground/80 hover:text-primary hover:bg-secondary transition-all flex items-center gap-2"
+            >
+              <Package className="w-4 h-4" />
+              Track Order
+            </a>
           </nav>
         </div>
       )}

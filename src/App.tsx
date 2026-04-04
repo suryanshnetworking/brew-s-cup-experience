@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import Index from "./pages/Index.tsx";
+import OrderTracking from "./pages/OrderTracking.tsx";
+import DeliveryConfirm from "./pages/DeliveryConfirm.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -18,6 +20,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/orders" element={<OrderTracking />} />
+            <Route path="/delivery-confirm" element={<DeliveryConfirm />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

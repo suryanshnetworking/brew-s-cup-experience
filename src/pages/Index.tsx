@@ -6,14 +6,12 @@ import MenuSection from "@/components/MenuSection";
 import BookingSection from "@/components/BookingSection";
 import ContactSection from "@/components/ContactSection";
 import CartDrawer from "@/components/CartDrawer";
-import IntroAnimation from "@/components/IntroAnimation";
 import ScrollAnimator from "@/components/ScrollAnimator";
 import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
     <>
-      <IntroAnimation />
       <Header />
       <CartDrawer />
       <main>
