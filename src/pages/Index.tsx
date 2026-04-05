@@ -3,6 +3,7 @@ import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import GallerySection from "@/components/GallerySection";
 import MenuSection from "@/components/MenuSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import BookingSection from "@/components/BookingSection";
 import ContactSection from "@/components/ContactSection";
 import CartDrawer from "@/components/CartDrawer";
@@ -28,9 +29,12 @@ const Index = () => {
           <MenuSection />
         </ScrollAnimator>
         <ScrollAnimator index={4}>
-          <BookingSection />
+          <TestimonialsSection />
         </ScrollAnimator>
         <ScrollAnimator index={5}>
+          <BookingSection />
+        </ScrollAnimator>
+        <ScrollAnimator index={6}>
           <ContactSection />
         </ScrollAnimator>
       </main>

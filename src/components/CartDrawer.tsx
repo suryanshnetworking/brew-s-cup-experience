@@ -4,10 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Plus, Minus, Trash2, ShoppingBag, CheckCircle, Loader2 } from "lucide-react";
+import { X, Plus, Minus, Trash2, ShoppingBag, CheckCircle, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 const FORMSPREE_URL = "https://formspree.io/f/mvzwgbdjamd";
+
+const VALID_JHANSI_PINCODES = new Set([
+  "284001", "284002", "284003", "284120", "284121", "284122", "284123",
+  "284124", "284125", "284126", "284127", "284128", "284135", "284136",
+  "284140", "284141", "284143", "284145", "284149",
+]);
 
 export default function CartDrawer() {
   const { items, updateQuantity, removeItem, clearCart, total, isOpen, setIsOpen, isBuyNow, setIsBuyNow } = useCart();
@@ -37,8 +43,7 @@ export default function CartDrawer() {
   }, [isOpen]);
 
   const validateJhansiPincode = (pin: string) => {
-    const num = parseInt(pin);
-    return pin.length === 6 && num >= 284001 && num <= 284010;
+    return VALID_JHANSI_PINCODES.has(pin.trim());
   };
 
   const isWithinWorkingHours = () => {
@@ -54,7 +59,7 @@ export default function CartDrawer() {
       return false;
     }
     if (!validateJhansiPincode(pincode)) {
-      toast.error("Sorry, we only deliver within Jhansi (284001-284010).");
+      toast.error("Sorry, we currently deliver only within Jhansi. Your address appears to be outside our delivery zone. Please check your pincode and try again.");
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,11 +81,6 @@ export default function CartDrawer() {
         body: { action: "send", email: form.email },
       });
       if (error) throw error;
-
-      // DEV: Show OTP in toast for testing (remove in production)
-      if (data?.otp) {
-        toast.info(`Dev OTP: ${data.otp}`, { duration: 60000 });
-      }
 
       setOtpAttempts(0);
       setOtp("");
@@ -258,12 +258,15 @@ export default function CartDrawer() {
                 <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="10-digit phone" maxLength={15} />
               </div>
               <div className="space-y-2">
-                <Label>Address (Jhansi only) *</Label>
+                <Label className="flex items-center gap-1"><MapPin className="w-4 h-4" /> Address (Jhansi only) *</Label>
                 <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Your address in Jhansi" maxLength={300} />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>Pincode *</Label>
-                <Input value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} placeholder="e.g. 284001" maxLength={6} />
+                <Input value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })} placeholder="e.g. 284001" maxLength={6} />
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> Delivery available within Jhansi district only (e.g. 284001–284149)
+                </p>
               </div>
             </div>
           )}

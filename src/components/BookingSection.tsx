@@ -12,6 +12,12 @@ const TIME_SLOTS = [
   "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM",
 ];
 
+const VALID_JHANSI_PINCODES = new Set([
+  "284001", "284002", "284003", "284120", "284121", "284122", "284123",
+  "284124", "284125", "284126", "284127", "284128", "284135", "284136",
+  "284140", "284141", "284143", "284145", "284149",
+]);
+
 function getBookedKey(table: string, date: string, time: string) {
   return `booked_${table}_${date}_${time}`;
 }
@@ -27,11 +33,6 @@ export default function BookingSection() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const validateJhansiPincode = (pin: string) => {
-    const num = parseInt(pin);
-    return pin.length === 6 && num >= 284001 && num <= 284010;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { name, email, phone, address, pincode, date, time, table } = form;
@@ -41,14 +42,23 @@ export default function BookingSection() {
       return;
     }
 
-    if (!validateJhansiPincode(pincode)) {
-      toast.error("Sorry, we only serve within Jhansi. Please enter a valid Jhansi pincode (284001-284010).");
+    if (!VALID_JHANSI_PINCODES.has(pincode.trim())) {
+      toast.error("Sorry, we only serve within Jhansi district. Please enter a valid Jhansi pincode.");
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) { toast.error("Please enter a valid email."); return; }
     if (phone.length < 10) { toast.error("Please enter a valid phone number."); return; }
+
+    // Check selected date is not in the past
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      toast.error("Please select today's date or a future date.");
+      return;
+    }
 
     // Check if table is booked
     const key = getBookedKey(table, date, time);
@@ -124,9 +134,10 @@ export default function BookingSection() {
               <Label htmlFor="b-address" className="flex items-center gap-1"><MapPin className="w-4 h-4" /> Address (Jhansi only) *</Label>
               <Input id="b-address" name="address" value={form.address} onChange={handleChange} placeholder="Your address in Jhansi" required maxLength={300} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="b-pincode">Pincode (Jhansi) *</Label>
               <Input id="b-pincode" name="pincode" value={form.pincode} onChange={handleChange} placeholder="e.g. 284001" required maxLength={6} />
+              <p className="text-xs text-muted-foreground">Only Jhansi district pincodes accepted</p>
             </div>
           </div>
 

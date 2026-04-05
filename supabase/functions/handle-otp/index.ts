@@ -5,6 +5,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function sendOtpEmail(email: string, otp: string) {
+  const EMAILJS_SERVICE_ID = "service_6lyjnre";
+  const EMAILJS_TEMPLATE_ID = "template_ftjp54g";
+  const EMAILJS_PUBLIC_KEY = "BreHW8OTtirWX2BD";
+
+  const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: EMAILJS_TEMPLATE_ID,
+      user_id: EMAILJS_PUBLIC_KEY,
+      template_params: {
+        to_email: email,
+        otp_code: otp,
+        message: `Your Brew's Cup verification code is: ${otp}. It expires in 5 minutes.`,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("EmailJS error:", text);
+    throw new Error("Failed to send OTP email");
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -29,10 +56,8 @@ Deno.serve(async (req) => {
       const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-      // Remove existing OTPs for this email
       await supabase.from("otps").delete().eq("email", email);
 
-      // Store new OTP
       const { error } = await supabase.from("otps").insert({
         email,
         otp: generatedOtp,
@@ -41,10 +66,11 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
 
-      // TODO: Integrate email service (EmailJS, Resend, etc.) to send OTP to customer
-      // For development, the OTP is returned in the response
+      // Send OTP via EmailJS
+      await sendOtpEmail(email, generatedOtp);
+
       return new Response(
-        JSON.stringify({ success: true, message: "OTP sent", otp: generatedOtp }),
+        JSON.stringify({ success: true, message: "OTP sent" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
