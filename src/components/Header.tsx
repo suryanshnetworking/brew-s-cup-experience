@@ -22,8 +22,17 @@ export default function Header() {
 
   const scrollTo = (href: string) => {
     setMobileOpen(false);
+    if (window.location.pathname !== "/") {
+      window.location.href = "/" + href;
+      return;
+    }
     const el = document.querySelector(href);
-    el?.scrollIntoView({ behavior: "smooth" });
+    if (!el) return;
+    const wrapper = el.closest('.section-animate');
+    if (wrapper) wrapper.classList.add('visible');
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth" });
+    }, 50);
   };
 
   return (

@@ -2,12 +2,17 @@ import { Coffee } from "lucide-react";
 
 export default function Footer() {
   const scrollTo = (id: string) => {
-    const el = document.querySelector(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    } else if (window.location.pathname !== "/") {
-      window.location.href = `/${id}`;
+    if (window.location.pathname !== "/") {
+      window.location.href = "/" + id;
+      return;
     }
+    const el = document.querySelector(id);
+    if (!el) return;
+    const wrapper = el.closest('.section-animate');
+    if (wrapper) wrapper.classList.add('visible');
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth" });
+    }, 50);
   };
 
   return (
