@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 
 export default function HeroSection() {
   const scrollTo = (id: string) => {
-    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+    const section = document.querySelector(id);
+    if (!section) return;
+    // Make the ScrollAnimator wrapper visible before scrolling
+    const wrapper = section.closest('.section-animate');
+    if (wrapper) wrapper.classList.add('visible');
+    setTimeout(() => {
+      section.scrollIntoView({ behavior: "smooth" });
+    }, 50);
   };
 
   return (
