@@ -25,7 +25,7 @@ export default function HeroSection() {
   return (
     <section id="home" className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 25% 25%, hsl(32 80% 45% / 0.15) 0%, transparent 50%), radial-gradient(circle at 75% 75%, hsl(24 60% 25% / 0.1) 0%, transparent 50%)`
         }} />
