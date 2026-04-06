@@ -1,22 +1,31 @@
 import heroImg from "@/assets/hero-couple.jpg";
-import { Button } from "@/components/ui/button";
 
 export default function HeroSection() {
-  const scrollTo = (id: string) => {
-    const section = document.querySelector(id);
-    if (!section) return;
-    // Make the ScrollAnimator wrapper visible before scrolling
-    const wrapper = section.closest('.section-animate');
-    if (wrapper) wrapper.classList.add('visible');
-    setTimeout(() => {
-      section.scrollIntoView({ behavior: "smooth" });
-    }, 50);
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    // Make all sections visible first
+    document.querySelectorAll('.section-animate').forEach(el => {
+      el.classList.add('visible');
+    });
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      const target = document.getElementById(id);
+      if (target) {
+        const headerOffset = 80;
+        const elementPosition = target.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    });
   };
 
   return (
     <section id="home" className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 25% 25%, hsl(32 80% 45% / 0.15) 0%, transparent 50%), radial-gradient(circle at 75% 75%, hsl(24 60% 25% / 0.1) 0%, transparent 50%)`
         }} />
@@ -54,19 +63,20 @@ export default function HeroSection() {
               Where every sip tells a story. Handcrafted coffee, fresh bites & a cozy ambiance — delivered to your door or enjoyed at our tables.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button
-                onClick={() => scrollTo("#menu")}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+              <a
+                href="#menu"
+                onClick={(e) => handleClick(e, "menu")}
+                className="inline-block bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
               >
                 View Menu
-              </Button>
-              <Button
-                onClick={() => scrollTo("#booking")}
-                variant="outline"
-                className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-6 text-base font-semibold rounded-xl transition-all"
+              </a>
+              <a
+                href="#booking"
+                onClick={(e) => handleClick(e, "booking")}
+                className="inline-block border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-3 text-base font-semibold rounded-xl transition-all cursor-pointer"
               >
                 Book a Table
-              </Button>
+              </a>
             </div>
           </div>
         </div>

@@ -26,13 +26,16 @@ export default function Header() {
       window.location.href = "/" + href;
       return;
     }
+    document.querySelectorAll('.section-animate').forEach(el => {
+      (el as HTMLElement).style.transition = 'none';
+      el.classList.add('visible');
+    });
+    document.body.offsetHeight;
+    document.querySelectorAll('.section-animate').forEach(el => {
+      (el as HTMLElement).style.transition = '';
+    });
     const el = document.querySelector(href);
-    if (!el) return;
-    const wrapper = el.closest('.section-animate');
-    if (wrapper) wrapper.classList.add('visible');
-    setTimeout(() => {
-      el.scrollIntoView({ behavior: "smooth" });
-    }, 50);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
