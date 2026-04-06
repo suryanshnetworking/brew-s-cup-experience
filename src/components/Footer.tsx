@@ -6,13 +6,11 @@ export default function Footer() {
       window.location.href = "/" + id;
       return;
     }
-    const el = document.querySelector(id);
-    if (!el) return;
-    const wrapper = el.closest('.section-animate');
-    if (wrapper) wrapper.classList.add('visible');
+    document.querySelectorAll('.section-animate').forEach(el => el.classList.add('visible'));
     setTimeout(() => {
-      el.scrollIntoView({ behavior: "smooth" });
-    }, 50);
+      const el = document.querySelector(id);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   return (
