@@ -1,5 +1,4 @@
 import heroImg from "@/assets/hero-couple.jpg";
-import { Button } from "@/components/ui/button";
 
 export default function HeroSection() {
   const scrollTo = (id: string) => {
