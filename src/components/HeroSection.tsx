@@ -3,12 +3,21 @@ import { Button } from "@/components/ui/button";
 
 export default function HeroSection() {
   const scrollTo = (id: string) => {
-    // Make ALL section-animate wrappers visible so layout is correct
-    document.querySelectorAll('.section-animate').forEach(el => el.classList.add('visible'));
-    setTimeout(() => {
-      const section = document.querySelector(id);
-      if (section) section.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    // Make ALL section-animate wrappers visible immediately (no transition)
+    document.querySelectorAll('.section-animate').forEach(el => {
+      (el as HTMLElement).style.transition = 'none';
+      el.classList.add('visible');
+    });
+    // Force reflow
+    document.body.offsetHeight;
+    // Restore transitions
+    document.querySelectorAll('.section-animate').forEach(el => {
+      (el as HTMLElement).style.transition = '';
+    });
+    const section = document.querySelector(id);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
