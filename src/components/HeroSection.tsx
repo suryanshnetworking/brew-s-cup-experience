@@ -65,14 +65,14 @@ export default function HeroSection() {
             <div className="flex flex-wrap gap-4">
               <a
                 href="#menu"
-                onClick={(e) => { e.preventDefault(); scrollTo("#menu"); }}
+                onClick={(e) => handleClick(e, "menu")}
                 className="inline-block bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
               >
                 View Menu
               </a>
               <a
                 href="#booking"
-                onClick={(e) => { e.preventDefault(); scrollTo("#booking"); }}
+                onClick={(e) => handleClick(e, "booking")}
                 className="inline-block border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-3 text-base font-semibold rounded-xl transition-all cursor-pointer"
               >
                 Book a Table
