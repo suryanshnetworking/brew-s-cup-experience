@@ -328,7 +328,7 @@ export default function AaruhiChat() {
             />
             {speechSupport && (
               <button
-                className={`p-2 rounded-xl transition-all ${listening ? "bg-red-500/20 text-red-400 ring-2 ring-red-400/50 animate-pulse" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-accent/20"} border border-border`}
+                className={`p-2 rounded-xl transition-all ${listening ? "bg-destructive/20 text-destructive ring-2 ring-destructive/50 animate-pulse" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-accent/20"} border border-border`}
                 onClick={listening ? stopListening : startListening}
                 disabled={loading}
                 title={listening ? "Stop" : "Speak"}
