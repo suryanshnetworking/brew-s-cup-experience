@@ -1,22 +1,25 @@
 import heroImg from "@/assets/hero-couple.jpg";
 
 export default function HeroSection() {
-  const scrollTo = (id: string) => {
-    // Make ALL section-animate wrappers visible immediately (no transition)
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    // Make all sections visible first
     document.querySelectorAll('.section-animate').forEach(el => {
-      (el as HTMLElement).style.transition = 'none';
       el.classList.add('visible');
     });
-    // Force reflow
-    document.body.offsetHeight;
-    // Restore transitions
-    document.querySelectorAll('.section-animate').forEach(el => {
-      (el as HTMLElement).style.transition = '';
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      const target = document.getElementById(id);
+      if (target) {
+        const headerOffset = 80;
+        const elementPosition = target.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
     });
-    const section = document.querySelector(id);
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth" });
-    }
   };
 
   return (
