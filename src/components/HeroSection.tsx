@@ -61,19 +61,20 @@ export default function HeroSection() {
               Where every sip tells a story. Handcrafted coffee, fresh bites & a cozy ambiance — delivered to your door or enjoyed at our tables.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button
+              <button
+                type="button"
                 onClick={() => scrollTo("#menu")}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
                 View Menu
-              </Button>
-              <Button
+              </button>
+              <button
+                type="button"
                 onClick={() => scrollTo("#booking")}
-                variant="outline"
-                className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-6 text-base font-semibold rounded-xl transition-all"
+                className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-3 text-base font-semibold rounded-xl transition-all"
               >
                 Book a Table
-              </Button>
+              </button>
             </div>
           </div>
         </div>
