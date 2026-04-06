@@ -9,6 +9,7 @@ import ContactSection from "@/components/ContactSection";
 import CartDrawer from "@/components/CartDrawer";
 import ScrollAnimator from "@/components/ScrollAnimator";
 import Footer from "@/components/Footer";
+import AaruhiChat from "@/components/AaruhiChat";
 
 const Index = () => {
   return (
@@ -39,6 +40,7 @@ const Index = () => {
         </ScrollAnimator>
       </main>
       <Footer />
+      <AaruhiChat />
     </>
   );
 };
