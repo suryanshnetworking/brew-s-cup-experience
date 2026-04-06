@@ -26,11 +26,16 @@ export default function Header() {
       window.location.href = "/" + href;
       return;
     }
-    document.querySelectorAll('.section-animate').forEach(el => el.classList.add('visible'));
-    setTimeout(() => {
-      const el = document.querySelector(href);
-      if (el) el.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    document.querySelectorAll('.section-animate').forEach(el => {
+      (el as HTMLElement).style.transition = 'none';
+      el.classList.add('visible');
+    });
+    document.body.offsetHeight;
+    document.querySelectorAll('.section-animate').forEach(el => {
+      (el as HTMLElement).style.transition = '';
+    });
+    const el = document.querySelector(href);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
