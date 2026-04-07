@@ -6,9 +6,14 @@ const corsHeaders = {
 };
 
 async function sendOtpEmail(email: string, otp: string) {
-  const EMAILJS_SERVICE_ID = "service_6lyjnre";
-  const EMAILJS_TEMPLATE_ID = "template_ftjp54g";
-  const EMAILJS_PUBLIC_KEY = "BreHW8OTtirWX2BD";
+  const EMAILJS_SERVICE_ID = Deno.env.get("EMAILJS_SERVICE_ID");
+  const EMAILJS_TEMPLATE_ID = Deno.env.get("EMAILJS_TEMPLATE_ID");
+  const EMAILJS_PUBLIC_KEY = Deno.env.get("EMAILJS_PUBLIC_KEY");
+
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+    console.error("Missing EmailJS environment variables");
+    throw new Error("Email service not configured");
+  }
 
   const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
     method: "POST",
