@@ -89,7 +89,10 @@ Deno.serve(async (req) => {
       try {
         await sendOtpEmail(email, generatedOtp);
       } catch (emailError) {
-        await supabase.from("otps").delete().eq("id", insertedOtp.id);
+        const { error: cleanupError } = await supabase.from("otps").delete().eq("id", insertedOtp.id);
+        if (cleanupError) {
+          console.error("Failed to cleanup OTP record after email error:", cleanupError.message);
+        }
         throw emailError;
       }
 
