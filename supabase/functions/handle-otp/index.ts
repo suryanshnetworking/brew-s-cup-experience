@@ -32,7 +32,18 @@ async function sendOtpEmail(email: string, otp: string) {
 
   if (!res.ok) {
     const text = await res.text();
+    const normalized = text.toLowerCase();
+
     console.error("EmailJS error:", text);
+
+    if (normalized.includes("non-browser environments")) {
+      throw new Error("EmailJS blocked server-side requests. Enable API access from non-browser environments in your EmailJS security settings.");
+    }
+
+    if (normalized.includes("public key is invalid")) {
+      throw new Error("EmailJS public key is invalid.");
+    }
+
     throw new Error("Failed to send OTP email");
   }
 }
@@ -63,16 +74,24 @@ Deno.serve(async (req) => {
 
       await supabase.from("otps").delete().eq("email", email);
 
-      const { error } = await supabase.from("otps").insert({
-        email,
-        otp: generatedOtp,
-        expires_at: expiresAt,
-      });
+      const { data: insertedOtp, error } = await supabase
+        .from("otps")
+        .insert({
+          email,
+          otp: generatedOtp,
+          expires_at: expiresAt,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
 
-      // Send OTP via EmailJS
-      await sendOtpEmail(email, generatedOtp);
+      try {
+        await sendOtpEmail(email, generatedOtp);
+      } catch (emailError) {
+        await supabase.from("otps").delete().eq("id", insertedOtp.id);
+        throw emailError;
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: "OTP sent" }),
