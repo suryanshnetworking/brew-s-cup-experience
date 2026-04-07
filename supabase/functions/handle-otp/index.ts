@@ -32,7 +32,18 @@ async function sendOtpEmail(email: string, otp: string) {
 
   if (!res.ok) {
     const text = await res.text();
+    const normalized = text.toLowerCase();
+
     console.error("EmailJS error:", text);
+
+    if (normalized.includes("non-browser environments")) {
+      throw new Error("EmailJS blocked server-side requests. Enable API access from non-browser environments in your EmailJS security settings.");
+    }
+
+    if (normalized.includes("public key is invalid")) {
+      throw new Error("EmailJS public key is invalid.");
+    }
+
     throw new Error("Failed to send OTP email");
   }
 }
@@ -63,16 +74,27 @@ Deno.serve(async (req) => {
 
       await supabase.from("otps").delete().eq("email", email);
 
-      const { error } = await supabase.from("otps").insert({
-        email,
-        otp: generatedOtp,
-        expires_at: expiresAt,
-      });
+      const { data: insertedOtp, error } = await supabase
+        .from("otps")
+        .insert({
+          email,
+          otp: generatedOtp,
+          expires_at: expiresAt,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
 
-      // Send OTP via EmailJS
-      await sendOtpEmail(email, generatedOtp);
+      try {
+        await sendOtpEmail(email, generatedOtp);
+      } catch (emailError) {
+        const { error: cleanupError } = await supabase.from("otps").delete().eq("id", insertedOtp.id);
+        if (cleanupError) {
+          console.error("Failed to cleanup OTP record after email error:", cleanupError.message);
+        }
+        throw emailError;
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: "OTP sent" }),
@@ -139,8 +161,9 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unexpected server error";
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
