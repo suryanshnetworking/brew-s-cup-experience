@@ -29,16 +29,14 @@ export default function DeliveryConfirm() {
     if (!orderInput.trim()) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("orders" as any)
-        .select("*")
-        .eq("order_number", orderInput.trim().toUpperCase())
-        .single();
-      if (error || !data) {
+      const { data, error } = await supabase.functions.invoke("lookup-order", {
+        body: { order_number: orderInput.trim().toUpperCase() },
+      });
+      if (error || !data?.order) {
         toast.error("Order not found.");
         setOrder(null);
       } else {
-        setOrder(data);
+        setOrder(data.order);
       }
     } catch { toast.error("Error looking up order."); }
     setLoading(false);

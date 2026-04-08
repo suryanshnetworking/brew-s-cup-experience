@@ -5,6 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function hashOtp(otp: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(otp);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function sendOtpEmail(email: string, otp: string) {
   const EMAILJS_SERVICE_ID = Deno.env.get("EMAILJS_SERVICE_ID");
   const EMAILJS_TEMPLATE_ID = Deno.env.get("EMAILJS_TEMPLATE_ID");
@@ -63,6 +71,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate email format
+    if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -70,6 +86,7 @@ Deno.serve(async (req) => {
 
     if (action === "send") {
       const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await hashOtp(generatedOtp);
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
       await supabase.from("otps").delete().eq("email", email);
@@ -78,7 +95,7 @@ Deno.serve(async (req) => {
         .from("otps")
         .insert({
           email,
-          otp: generatedOtp,
+          otp: hashedOtp,
           expires_at: expiresAt,
         })
         .select("id")
@@ -103,9 +120,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "verify") {
-      if (!otp) {
+      if (!otp || typeof otp !== "string" || !/^\d{6}$/.test(otp)) {
         return new Response(
-          JSON.stringify({ verified: false, message: "OTP is required" }),
+          JSON.stringify({ verified: false, message: "OTP must be a 6-digit code" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
@@ -127,6 +144,7 @@ Deno.serve(async (req) => {
       }
 
       if (new Date(data.expires_at) < new Date()) {
+        await supabase.from("otps").delete().eq("id", data.id);
         return new Response(
           JSON.stringify({ verified: false, message: "OTP has expired. Please request a new one." }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -134,14 +152,17 @@ Deno.serve(async (req) => {
       }
 
       if (data.attempts >= 3) {
+        await supabase.from("otps").delete().eq("id", data.id);
         return new Response(
           JSON.stringify({ verified: false, message: "Too many attempts. Please request a new OTP." }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      if (data.otp === otp) {
-        await supabase.from("otps").update({ verified: true }).eq("id", data.id);
+      const hashedSubmitted = await hashOtp(otp);
+
+      if (data.otp === hashedSubmitted) {
+        await supabase.from("otps").delete().eq("id", data.id);
         return new Response(
           JSON.stringify({ verified: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -13,9 +13,42 @@ Deno.serve(async (req) => {
   try {
     const { order_number, status, return_status, return_reason, return_note } = await req.json();
 
-    if (!order_number) {
+    if (!order_number || typeof order_number !== "string") {
       return new Response(
         JSON.stringify({ error: "order_number is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const sanitizedOrderNumber = order_number.trim().toUpperCase().slice(0, 30);
+
+    // Validate allowed status values
+    const VALID_STATUSES = ["Pending", "Confirmed", "Out for Delivery", "Delivered", "Cancelled"];
+    if (status && !VALID_STATUSES.includes(status)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid status value" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const VALID_RETURN_STATUSES = ["Requested", "Approved", "Rejected", "Completed"];
+    if (return_status && !VALID_RETURN_STATUSES.includes(return_status)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid return_status value" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    if (return_reason !== undefined && typeof return_reason === "string" && return_reason.length > 500) {
+      return new Response(
+        JSON.stringify({ error: "return_reason too long" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    if (return_note !== undefined && typeof return_note === "string" && return_note.length > 1000) {
+      return new Response(
+        JSON.stringify({ error: "return_note too long" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -29,7 +62,7 @@ Deno.serve(async (req) => {
     const { data: currentOrder, error: fetchError } = await supabase
       .from("orders")
       .select("status")
-      .eq("order_number", order_number)
+      .eq("order_number", sanitizedOrderNumber)
       .single();
 
     if (fetchError || !currentOrder) {
@@ -65,7 +98,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from("orders")
       .update(updates)
-      .eq("order_number", order_number)
+      .eq("order_number", sanitizedOrderNumber)
       .select()
       .single();
 
@@ -77,7 +110,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Server error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
