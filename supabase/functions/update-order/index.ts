@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     const { data: currentOrder, error: fetchError } = await supabase
       .from("orders")
       .select("status")
-      .eq("order_number", order_number)
+      .eq("order_number", sanitizedOrderNumber)
       .single();
 
     if (fetchError || !currentOrder) {
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from("orders")
       .update(updates)
-      .eq("order_number", order_number)
+      .eq("order_number", sanitizedOrderNumber)
       .select()
       .single();
 
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Server error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
