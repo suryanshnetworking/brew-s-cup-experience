@@ -47,15 +47,13 @@ export default function OrderTracking() {
     setLoading(true);
     setOrder(null);
     try {
-      const { data, error } = await supabase
-        .from("orders" as any)
-        .select("*")
-        .eq("order_number", orderInput.trim().toUpperCase())
-        .single();
-      if (error || !data) {
+      const { data, error } = await supabase.functions.invoke("lookup-order", {
+        body: { order_number: orderInput.trim().toUpperCase() },
+      });
+      if (error || !data?.order) {
         toast.error("Order not found. Please check the order number.");
       } else {
-        setOrder(data as any);
+        setOrder(data.order as any);
       }
     } catch { toast.error("Error looking up order."); }
     setLoading(false);

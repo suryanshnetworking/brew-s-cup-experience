@@ -125,18 +125,20 @@ export default function CartDrawer() {
       setConfirmedTotal(total);
       const itemsSummary = items.map(i => `${i.name} x${i.quantity} = ₹${i.price * i.quantity}`).join(", ");
 
-      // Insert order into database
-      await supabase.from("orders" as any).insert({
-        order_number: orderNo,
-        customer_name: form.name,
-        customer_email: form.email,
-        customer_phone: form.phone,
-        customer_address: `${form.address}, Jhansi - ${form.pincode}`,
-        customer_pincode: form.pincode,
-        items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
-        total,
-        status: "Confirmed",
+      // Insert order via edge function with server-side validation
+      const { error: createError } = await supabase.functions.invoke("create-order", {
+        body: {
+          order_number: orderNo,
+          customer_name: form.name,
+          customer_email: form.email,
+          customer_phone: form.phone,
+          customer_address: `${form.address}, Jhansi - ${form.pincode}`,
+          customer_pincode: form.pincode,
+          items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+          total,
+        },
       });
+      if (createError) throw createError;
 
       // Submit to Formspree
       await fetch(FORMSPREE_URL, {
